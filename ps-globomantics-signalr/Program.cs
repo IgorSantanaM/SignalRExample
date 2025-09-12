@@ -1,10 +1,11 @@
+using ps_globomantics_signalr.Hubs;
 using ps_globomantics_signalr.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
-builder.Services.AddSignalR(o => o.EnableDetailedErrors = true);
+builder.Services.AddSignalR();
 builder.Services.AddSingleton<IAuctionRepo, AuctionMemoryRepo>();
 
 var app = builder.Build();
@@ -32,5 +33,7 @@ app.MapPost("auction/{auctionId}/newbid", (int auctionId, int currentBid, IAucti
 {
     auctionRepo.NewBid(auctionId, currentBid);
 });
+
+app.MapHub<AuctionHub>("/auctionhub");
 
 app.Run();
