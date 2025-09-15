@@ -7,6 +7,11 @@ namespace ps_globomantics_signalr.Hubs
     {
         public async Task NotifyNewBid(AuctionNotify auction)
         {
+            var groupName = $"auction-{auction.AuctionId}";
+
+            await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+            await Clients.OthersInGroup(groupName).SendAsync("NotifyOutBid", auction);
+
             await Clients.All.SendAsync("ReceiveNewBid", auction);
         }
     }
