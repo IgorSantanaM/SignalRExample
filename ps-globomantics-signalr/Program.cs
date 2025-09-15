@@ -1,10 +1,25 @@
+using Microsoft.AspNetCore.SignalR;
+using ps_globomantics_signalr.Hubs;
+using ps_globomantics_signalr.Models;
 using ps_globomantics_signalr.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
-builder.Services.AddSignalR(o => o.EnableDetailedErrors = true);
+builder.Services.AddSignalR(o => {
+if (!builder.Environment.IsDevelopment())
+{
+    o.EnableDetailedErrors = false;
+    o.MaximumReceiveMessageSize = 32 * 1024; // 32 KB
+}
+else
+{
+    o.EnableDetailedErrors = true;
+    o.MaximumReceiveMessageSize = null; // Unlimited
+}
+})
+    .AddMessagePackProtocol();
 builder.Services.AddSingleton<IAuctionRepo, AuctionMemoryRepo>();
 
 var app = builder.Build();
@@ -16,7 +31,7 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-
+ 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
@@ -32,5 +47,13 @@ app.MapPost("auction/{auctionId}/newbid", (int auctionId, int currentBid, IAucti
 {
     auctionRepo.NewBid(auctionId, currentBid);
 });
+
+app.MapPost("auction", async (Auction auction, IAuctionRepo auctionRepo, IHubContext<AuctionHub> hubContext) =>
+{
+    auctionRepo.NewBid(auction.Id, auction.CurrentBid);
+    await hubContext.Clients.All.SendAsync("ReceiveNewAuction", auction);
+});
+
+app.MapHub<AuctionHub>("/auctionhub");
 
 app.Run();
